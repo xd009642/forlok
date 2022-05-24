@@ -21,9 +21,7 @@ impl Context {
 
 
     async fn start_session(&self, id: String) {
-        let mut w = self.sessions.write().await;
         let (tx, mut rx)  = mpsc::channel(16);
-        w.insert(id.clone(), tx.clone());
         tokio::task::spawn(async move {
             let mut state = GameState::default();
             while let Ok(Some(msg)) = timeout(Duration::new(600,0), rx.recv()).await {
@@ -44,6 +42,10 @@ impl Context {
             let mut w = sesh_handle.write().await;
             w.remove(&id);
         });
+
+        // Minimise time we hold the write, and only add to session once tasks are running instead
+        let mut w = self.sessions.write().await;
+        w.insert(id.clone(), tx.clone());
     }
 
 
